@@ -1,4 +1,12 @@
-import { redirect, type MetaFunction, json } from "@remix-run/node";
+import {
+  type MetaFunction,
+  type ActionFunctionArgs,
+  redirect,
+  json,
+} from "@remix-run/node";
+import * as z from "zod";
+import { Form, useActionData, useNavigation } from "@remix-run/react";
+
 import { Button } from "~/components/ui/button";
 import {
   Card,
@@ -11,21 +19,37 @@ import {
 import { Input } from "~/components/ui/input";
 import { Label } from "~/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "~/components/ui/tabs";
-
 import Loading from "~/components/loading";
 
 import { register, login } from "~/models/user/user.server";
-import { User } from "~/models/user/user.entity";
-
-import * as z from "zod";
-import { Form, useActionData, useNavigation } from "@remix-run/react";
+import { type AuthPayload } from "~/models/user/user.entity";
+import { createUserSession, getUser } from "~/models/user/user.session";
+import { authAdmin } from "~/plugins/firebase.admin";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "New Remix App" },
-    { name: "description", content: "Welcome to Remix!" },
+    { title: "Point | Overview" },
+    {
+      name: "description",
+      content: "Primakara Developers Point System",
+    },
   ];
 };
+
+export async function loader({ request }: ActionFunctionArgs) {
+  try {
+    const user = await getUser(request);
+
+    if (user) {
+      return redirect(user.auth.role === "admin" ? "/admin" : "/dashboard");
+    }
+
+    return new Response("Logout", { status: 401 });
+  } catch (error) {
+    redirect("/");
+    return new Response("Invalid session", { status: 401 });
+  }
+}
 
 export async function action({ request }: { request: Request }) {
   const formData = await request.formData();
@@ -50,11 +74,11 @@ export async function action({ request }: { request: Request }) {
         name: payload?.name,
         email: payload?.email,
         password: payload?.password,
-      } as User,
+      } as AuthPayload,
       "member"
     );
 
-    return redirect("/dashboard");
+    return redirect("/");
   }
 
   if (intent === "login") {
@@ -63,20 +87,40 @@ export async function action({ request }: { request: Request }) {
       password: z.string().min(6),
     });
 
-    const loginProcess = loginProcessSchema.safeParse(
+    const loginFormValidation = loginProcessSchema.safeParse(
       Object.fromEntries(formData)
     );
 
-    if (!loginProcess.success) {
-      return { loginErrors: loginProcess.error.flatten() };
+    if (!loginFormValidation.success) {
+      return { loginErrors: loginFormValidation.error.flatten() };
     }
 
-    await login({
+    const token = await login({
       email: payload?.email,
       password: payload?.password,
-    } as User);
+    } as AuthPayload);
 
-    return redirect("/dashboard");
+    if (typeof token !== "string") {
+      throw new Response("Invalid data", { status: 400 });
+    }
+
+    try {
+      // Only process if the user just signed in in the last 5 minutes.
+      const decodedToken = await authAdmin.verifyIdToken(token);
+      if (new Date().getTime() / 1000 - decodedToken.auth_time > 5 * 60) {
+        await authAdmin.revokeRefreshTokens(decodedToken.sub);
+        throw new Response("Recent sign in required!", { status: 401 });
+      }
+
+      return await createUserSession({
+        request,
+        token,
+        remember: true,
+        redirectTo: decodedToken.role === "admin" ? "/admin" : "/dashboard",
+      });
+    } catch (error) {
+      throw new Response("Token invalid!", { status: 401 });
+    }
   }
 
   throw json({ message: "Invalid intent" }, { status: 400 });

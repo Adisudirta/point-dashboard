@@ -9,6 +9,15 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
 
 import { LogOut, Coins } from "lucide-react";
+import { ActionFunctionArgs, redirect } from "@remix-run/node";
+import { NavLink } from "@remix-run/react";
+import { requireUserRole } from "~/models/user/user.session";
+
+export async function loader({ request }: ActionFunctionArgs) {
+  const user = await requireUserRole(request, "member");
+
+  return { user };
+}
 
 export default function Dashboard() {
   return (
@@ -46,9 +55,17 @@ export default function Dashboard() {
         </CardContent>
 
         <CardFooter>
-          <Button variant="destructive" className="w-full">
-            <LogOut className="mr-2 h-5 w-5" /> Logout
-          </Button>
+          <NavLink to="/logout" className="w-full">
+            <Button
+              type="submit"
+              name="intent"
+              value="logout"
+              variant="destructive"
+              className="w-full"
+            >
+              <LogOut className="mr-2 h-5 w-5" /> Logout
+            </Button>
+          </NavLink>
         </CardFooter>
       </Card>
     </div>

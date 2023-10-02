@@ -1,10 +1,21 @@
-import { Outlet } from "@remix-run/react";
+import { Outlet, useNavigate, useNavigation } from "@remix-run/react";
 import DefaultLayout from "~/components/layouts/default";
+import Loading from "~/components/loading";
 
 export default function Dashboard() {
+  const navigation = useNavigation();
+
   return (
-    <DefaultLayout>
-      <Outlet />
-    </DefaultLayout>
+    <>
+      <Loading
+        isLoading={
+          navigation.state === "submitting" || navigation.state === "loading"
+        }
+      />
+
+      <DefaultLayout>
+        <Outlet />
+      </DefaultLayout>
+    </>
   );
 }

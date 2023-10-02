@@ -1,24 +1,58 @@
 import { db, authAdmin } from "~/plugins/firebase.admin";
 import { authClient } from "~/plugins/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
-import { User } from "./user.entity";
+import { AuthPayload, type Role, type Member } from "./user.entity";
 import { FieldValue } from "firebase-admin/firestore";
+import { destroyUserSession, requireUser } from "./user.session";
+import { redirect } from "@remix-run/node";
 
-type Role = "admin" | "member";
+const collection = db.collection("members");
 
-const collection = db.collection("points");
-
-async function register(body: User, role: Role) {
+async function register(body: AuthPayload, role: Role) {
   const user = await authAdmin.createUser(body);
   await authAdmin.setCustomUserClaims(user.uid, { role: role });
 
-  await collection
-    .doc(user.uid)
-    .create({ point: 0, updatedAt: FieldValue.serverTimestamp() });
+  await collection.doc(user.uid).create({
+    displayName: body.name,
+    email: body.email,
+    point: 0,
+    createdAt: FieldValue.serverTimestamp(),
+    updatedAt: FieldValue.serverTimestamp(),
+  });
+}
+async function login(body: AuthPayload) {
+  const { user } = await signInWithEmailAndPassword(
+    authClient,
+    body.email,
+    body.password
+  );
+  const idToken = await user.getIdToken();
+
+  return idToken;
 }
 
-async function login(body: User) {
-  await signInWithEmailAndPassword(authClient, body.email, body.password);
+async function logout(request: Request) {
+  try {
+    const user = await requireUser(request);
+    await authAdmin.revokeRefreshTokens(user.auth.sub);
+
+    await destroyUserSession(request);
+
+    return redirect("/");
+  } catch (error) {
+    return error;
+  }
 }
 
-export { type Role, register, login };
+async function getUserById(id: string) {
+  const res = await collection.doc(id).get();
+
+  const data = res.data();
+  if (!data) {
+    return undefined;
+  }
+
+  return { id: res.id, ...res.data() } as Member;
+}
+
+export { register, login, logout, getUserById };
