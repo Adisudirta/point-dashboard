@@ -7,7 +7,7 @@ export default function Loading({ isLoading }: LoadingProps) {
     <div
       className={`absolute bg-black ${
         isLoading ? "flex" : "hidden"
-      } flex h-screen items-center justify-center opacity-60 w-screen`}
+      } flex h-screen items-center justify-center opacity-60 w-screen z-50`}
     >
       <div className="flex justify-center items-center h-screen">
         <div className="relative inline-flex">

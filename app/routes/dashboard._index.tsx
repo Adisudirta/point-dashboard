@@ -7,19 +7,23 @@ import {
   CardFooter,
 } from "~/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "~/components/ui/avatar";
-
 import { LogOut, Coins } from "lucide-react";
-import { ActionFunctionArgs, redirect } from "@remix-run/node";
-import { NavLink } from "@remix-run/react";
+import { NavLink, useLoaderData } from "@remix-run/react";
 import { requireUserRole } from "~/models/user/user.session";
+import { Member } from "~/models/user/user.entity";
+import { getUserById } from "~/models/user/user.server";
 
-export async function loader({ request }: ActionFunctionArgs) {
-  const user = await requireUserRole(request, "member");
+export async function loader({ request }: { request: Request }) {
+  const { auth } = await requireUserRole(request, "member");
+  const user = await getUserById(auth.uid);
 
   return { user };
 }
 
 export default function Dashboard() {
+  const { user }: { user: Member } = useLoaderData();
+  console.log(user);
+
   return (
     <div className="container flex justify-center pt-[calc(25px+80px)]">
       <Card className="w-[320px]">
@@ -33,8 +37,8 @@ export default function Dashboard() {
             <AvatarFallback>AD</AvatarFallback>
           </Avatar>
 
-          <h2 className="font-semibold text-2xl">Adi Sudirta</h2>
-          <p>yanadisudirta@gmail.com</p>
+          <h2 className="font-semibold text-2xl">{user.displayName}</h2>
+          <p>{user.email}</p>
           <br />
 
           <Card className="mt-20 w-full">
@@ -47,7 +51,7 @@ export default function Dashboard() {
               <div className="flex items-center justify-center">
                 <Coins className="text-yellow-500 mr-2" />
                 <span className="font-semibold text-4xl text-yellow-500">
-                  1000
+                  {user.point}
                 </span>
               </div>
             </CardContent>

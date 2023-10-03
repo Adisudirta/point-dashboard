@@ -12,7 +12,7 @@ interface Props {
 
 export default function Header({ navigations }: Props) {
   return (
-    <header className="fixed shadow-md w-full z-50">
+    <header className="fixed shadow-md w-full z-40">
       <div className="container flex h-20 items-center justify-between">
         <div>
           <NavLink to="/">

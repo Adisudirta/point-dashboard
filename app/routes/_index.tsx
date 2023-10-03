@@ -25,10 +25,14 @@ import { register, login } from "~/models/user/user.server";
 import { type AuthPayload } from "~/models/user/user.entity";
 import { createUserSession, getUser } from "~/models/user/user.session";
 import { authAdmin } from "~/plugins/firebase.admin";
+import { FirebaseError } from "firebase/app";
+import { useToast } from "~/components/ui/use-toast";
+import { Toaster } from "~/components/ui/toaster";
+import { AlertTriangle, CheckCircle } from "lucide-react";
 
 export const meta: MetaFunction = () => {
   return [
-    { title: "Point | Overview" },
+    { title: "Point | Login" },
     {
       name: "description",
       content: "Primakara Developers Point System",
@@ -66,7 +70,7 @@ export async function action({ request }: { request: Request }) {
     const registerProcess = registerProcessSchema.safeParse(payload);
 
     if (!registerProcess.success) {
-      return { registerErrors: registerProcess.error.flatten() };
+      return { registerFieldErrors: registerProcess.error.flatten() };
     }
 
     await register(
@@ -78,7 +82,7 @@ export async function action({ request }: { request: Request }) {
       "member"
     );
 
-    return redirect("/");
+    return { registerMessage: "Register Success" };
   }
 
   if (intent === "login") {
@@ -92,13 +96,27 @@ export async function action({ request }: { request: Request }) {
     );
 
     if (!loginFormValidation.success) {
-      return { loginErrors: loginFormValidation.error.flatten() };
+      return { loginFieldErrors: loginFormValidation.error.flatten() };
     }
 
-    const token = await login({
-      email: payload?.email,
-      password: payload?.password,
-    } as AuthPayload);
+    let token: string | any;
+
+    try {
+      token = await login({
+        email: payload?.email,
+        password: payload?.password,
+      } as AuthPayload);
+    } catch (error) {
+      if (error instanceof FirebaseError) {
+        if (
+          error.code === "auth/user-not-found" ||
+          error.code === "auth/wrong-password" ||
+          error.code === "auth/invalid-login-credentials"
+        ) {
+          return { loginError: "Incorrect username or password" };
+        }
+      }
+    }
 
     if (typeof token !== "string") {
       throw new Response("Invalid data", { status: 400 });
@@ -130,8 +148,11 @@ export default function PageAuth() {
   const navigation = useNavigation();
 
   const actionData = useActionData() as any;
-  const loginErrors = actionData?.loginErrors?.fieldErrors;
-  const registerErrors = actionData?.registerErrors?.fieldErrors;
+
+  const registerMessage = actionData?.registerMessage;
+  const loginError = actionData?.loginError;
+  const loginFieldErrors = actionData?.loginErrors?.fieldErrors;
+  const registerFieldErrors = actionData?.registerErrors?.fieldErrors;
 
   return (
     <>
@@ -158,6 +179,12 @@ export default function PageAuth() {
                   </CardHeader>
 
                   <CardContent className="space-y-2">
+                    {loginError && (
+                      <div className="bg-red-500 flex items-center justify-center py-2 rounded-lg text-white w-full">
+                        <AlertTriangle className="mr-2" /> {loginError}
+                      </div>
+                    )}
+
                     <div className="space-y-1">
                       <Label htmlFor="email">Email</Label>
                       <Input
@@ -168,9 +195,9 @@ export default function PageAuth() {
                         placeholder="jokosatoru@mail.com"
                       />
 
-                      {loginErrors?.email && (
+                      {loginFieldErrors?.email && (
                         <span className="ml-1 text-red-500 text-sm">
-                          {loginErrors?.email[0]}
+                          {loginFieldErrors?.email[0]}
                         </span>
                       )}
                     </div>
@@ -185,9 +212,9 @@ export default function PageAuth() {
                         placeholder="************"
                       />
 
-                      {loginErrors?.password && (
+                      {loginFieldErrors?.password && (
                         <span className="ml-1 text-red-500 text-sm">
-                          {loginErrors?.password[0]}
+                          {loginFieldErrors?.password[0]}
                         </span>
                       )}
                     </div>
@@ -214,6 +241,12 @@ export default function PageAuth() {
                   </CardHeader>
 
                   <CardContent className="space-y-2">
+                    {registerMessage && (
+                      <div className="bg-green-500 flex items-center justify-center py-2 rounded-lg text-white w-full">
+                        <CheckCircle className="mr-2" /> {registerMessage}
+                      </div>
+                    )}
+
                     <div className="space-y-1">
                       <Label htmlFor="name">Username</Label>
                       <Input
@@ -223,9 +256,9 @@ export default function PageAuth() {
                         placeholder="Joko Satoru"
                       />
 
-                      {registerErrors?.name && (
+                      {registerFieldErrors?.name && (
                         <span className="ml-1 text-red-500 text-sm">
-                          {registerErrors?.name[0]}
+                          {registerFieldErrors?.name[0]}
                         </span>
                       )}
                     </div>
@@ -240,9 +273,9 @@ export default function PageAuth() {
                         placeholder="jokosatoru@mail.com"
                       />
 
-                      {registerErrors?.email && (
+                      {registerFieldErrors?.email && (
                         <span className="ml-1 text-red-500 text-sm">
-                          {registerErrors?.email[0]}
+                          {registerFieldErrors?.email[0]}
                         </span>
                       )}
                     </div>
@@ -257,9 +290,9 @@ export default function PageAuth() {
                         placeholder="************"
                       />
 
-                      {registerErrors?.password && (
+                      {registerFieldErrors?.password && (
                         <span className="ml-1 text-red-500 text-sm">
-                          {registerErrors?.password[0]}
+                          {registerFieldErrors?.password[0]}
                         </span>
                       )}
                     </div>
