@@ -11,5 +11,6 @@ export type Member = {
   email: string;
   image?: string;
   displayName: string;
-  point: number;
+  currentPoint: number;
+  achievedPoint: number;
 };

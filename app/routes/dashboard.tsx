@@ -1,4 +1,4 @@
-import { Outlet, useNavigate, useNavigation } from "@remix-run/react";
+import { Outlet, useNavigation } from "@remix-run/react";
 import DefaultLayout from "~/components/layouts/default";
 import Loading from "~/components/loading";
 

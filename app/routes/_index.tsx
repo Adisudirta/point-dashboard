@@ -26,8 +26,6 @@ import { type AuthPayload } from "~/models/user/user.entity";
 import { createUserSession, getUser } from "~/models/user/user.session";
 import { authAdmin } from "~/plugins/firebase.admin";
 import { FirebaseError } from "firebase/app";
-import { useToast } from "~/components/ui/use-toast";
-import { Toaster } from "~/components/ui/toaster";
 import { AlertTriangle, CheckCircle } from "lucide-react";
 
 export const meta: MetaFunction = () => {
@@ -73,16 +71,25 @@ export async function action({ request }: { request: Request }) {
       return { registerFieldErrors: registerProcess.error.flatten() };
     }
 
-    await register(
-      {
-        name: payload?.name,
-        email: payload?.email,
-        password: payload?.password,
-      } as AuthPayload,
-      "member"
-    );
+    try {
+      await register(
+        {
+          name: payload?.name,
+          email: payload?.email,
+          password: payload?.password,
+        } as AuthPayload,
+        "member"
+      );
 
-    return { registerMessage: "Register Success" };
+      return { registerMessage: "Register Success" };
+    } catch (error) {
+      if (error instanceof FirebaseError) {
+        return {
+          registerError:
+            "The email address is already in use by another account",
+        };
+      }
+    }
   }
 
   if (intent === "login") {
@@ -146,13 +153,14 @@ export async function action({ request }: { request: Request }) {
 
 export default function PageAuth() {
   const navigation = useNavigation();
-
   const actionData = useActionData() as any;
 
   const registerMessage = actionData?.registerMessage;
+  const registerError = actionData?.registerError;
+  const registerFieldErrors = actionData?.registerErrors?.fieldErrors;
+
   const loginError = actionData?.loginError;
   const loginFieldErrors = actionData?.loginErrors?.fieldErrors;
-  const registerFieldErrors = actionData?.registerErrors?.fieldErrors;
 
   return (
     <>
@@ -241,9 +249,15 @@ export default function PageAuth() {
                   </CardHeader>
 
                   <CardContent className="space-y-2">
-                    {registerMessage && (
+                    {registerMessage && !registerError && (
                       <div className="bg-green-500 flex items-center justify-center py-2 rounded-lg text-white w-full">
                         <CheckCircle className="mr-2" /> {registerMessage}
+                      </div>
+                    )}
+
+                    {registerError && (
+                      <div className="bg-red-500 flex items-center justify-center py-2 rounded-lg text-white w-full">
+                        <AlertTriangle className="mr-2" /> {registerError}
                       </div>
                     )}
 

@@ -12,7 +12,7 @@ interface Props {
 
 export default function Header({ navigations }: Props) {
   return (
-    <header className="fixed shadow-md w-full z-40">
+    <header className="bg-white fixed shadow-md w-full z-40">
       <div className="container flex h-20 items-center justify-between">
         <div>
           <NavLink to="/">
@@ -29,6 +29,7 @@ export default function Header({ navigations }: Props) {
         <div className="flex items-center leading-5 space-x-4 sm:space-x-6">
           {navigations.map((link) => (
             <NavLink
+              end
               key={link.title}
               to={link.href}
               className={({ isActive }) =>
@@ -108,6 +109,7 @@ function MobileNav({ navigations }: Props) {
           {navigations.map((link) => (
             <div key={link.title} className="px-12 py-4">
               <NavLink
+                end
                 to={link.href}
                 className={({ isActive }) =>
                   isActive

@@ -1,6 +1,7 @@
-import { Outlet, useNavigation } from "@remix-run/react";
-import Header from "~/components/header";
+import { useNavigation } from "@remix-run/react";
+import Header from "~/components/layouts/header";
 import Loading from "~/components/loading";
+import Footer from "./footer";
 
 export default function DefaultLayout({
   children,
@@ -8,9 +9,9 @@ export default function DefaultLayout({
   children: React.ReactNode;
 }) {
   const headerNavLinks = [
-    { href: "/", title: "Overview" },
-    { href: "/leaderboard", title: "Leaderboard" },
-    { href: "/shop", title: "Shop" },
+    { href: "/dashboard", title: "Overview" },
+    { href: "/dashboard/leaderboard", title: "Leaderboard" },
+    { href: "/dashboard/shop", title: "Shop" },
   ];
 
   const navigation = useNavigation();
@@ -21,6 +22,8 @@ export default function DefaultLayout({
 
       <Header navigations={headerNavLinks} />
       {children}
+
+      <Footer />
     </>
   );
 }

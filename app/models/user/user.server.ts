@@ -15,7 +15,8 @@ async function register(body: AuthPayload, role: Role) {
   await collection.doc(user.uid).create({
     displayName: body.name,
     email: body.email,
-    point: 0,
+    currentPoint: 0,
+    reachedPoint: 0,
     createdAt: FieldValue.serverTimestamp(),
     updatedAt: FieldValue.serverTimestamp(),
   });
